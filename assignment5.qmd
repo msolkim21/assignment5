@@ -1,0 +1,185 @@
+---
+title: "QTM 350 Assignment 5"
+author: Minsol Kim
+date: 2024-10-09
+format: 
+  html: 
+    code-fold: true
+  pdf: default
+bibliography: references.bib
+---
+
+
+```{python}
+#| echo: true
+
+import pandas as pd
+import wbgapi as wb
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# Define the indicators to download
+indicators = {
+    'gdp_per_capita': 'NY.GDP.PCAP.CD',
+    'gdp_growth_rate': 'NY.GDP.MKTP.KD.ZG',
+    'inflation_rate': 'FP.CPI.TOTL.ZG',
+    'unemployment_rate': 'SL.UEM.TOTL.ZS',
+    'total_population': 'SP.POP.TOTL',
+    'life_expectancy': 'SP.DYN.LE00.IN',
+    'adult_literacy_rate': 'SE.ADT.LITR.ZS',
+    'income_inequality': 'SI.POV.GINI',
+    'health_expenditure_gdp_share': 'SH.XPD.CHEX.GD.ZS',
+    'measles_immunisation_rate': 'SH.IMM.MEAS',
+    'education_expenditure_gdp_share': 'SE.XPD.TOTL.GD.ZS',
+    'primary_school_enrolment_rate': 'SE.PRM.ENRR',
+    'exports_gdp_share': 'NE.EXP.GNFS.ZS'
+}
+
+# Get the list of country codes for the "World" region
+country_codes = wb.region.members('WLD')
+
+# Download data for countries only in 2022
+df = wb.data.DataFrame(indicators.values(), economy=country_codes, time=2022, skipBlanks=True, labels=True).reset_index()
+
+# Delete the 'economy' column
+df = df.drop(columns=['economy'], errors='ignore')
+
+# Create a reversed dictionary mapping indicator codes to names
+# Rename the columns and convert all names to lowercase
+df.rename(columns=lambda x: {v: k for k, v in indicators.items()}.get(x, x).lower(), inplace=True)
+
+# Sort 'country' in ascending order
+df = df.sort_values('country', ascending=True)
+
+# Reset the index after sorting
+df = df.reset_index(drop=True)
+
+# Save the data to a CSV file
+df.to_csv('wdi.csv', index=False)
+```
+
+```{python}
+df2 = df.copy()
+
+top5_inflation = df2.nlargest(5, 'inflation_rate')
+top5_gdpgrowth = df2.nlargest(5, 'gdp_growth_rate')
+top5_unemployment = df2.nlargest(5, 'unemployment_rate')
+```
+<br>
+
+### Top 5 Countries with Highest Inflation inflation_rate
+
+```{python}
+top5_inflation[['country', 'inflation_rate']]
+```
+<br>
+In 2022, the countries with the highest inflation rates were Lebanon, Sudan, Zimbabwe, Turkiye and Suriname. 
+In Lebanon, Sudan and Zimbabwe, in particular, we can see that prices more than doubled since 2021 which is alarming. 
+All of the countries listed above are developing countries, and with inflation rates greater than 50%, they are suffering from hyperinflation. 
+<br>
+
+### Top 5 Countries with Highest GDP Growth Rate
+
+```{python}
+top5_gdpgrowth[['country', 'gdp_growth_rate']]
+```
+<br>
+The top five countries with the highest GDP growth rates are Guyana (63.44%), Fiji (20.02%), St. Lucia (18.08%)
+, Cabo Verde (17.44%), and Seychelles (14.98%). Guyana leads with a significant growth rate, primarily driven by its expanding oil industry. 
+The other countries are also experiencing significant growth due to factors like tourism recovery and economic diversification efforts.
+This trend highlights the potential for smaller or emerging economies to achieve rapid development. 
+<br>
+
+### Top 5 Countries with Highest Unemployment Rate
+
+```{python}
+top5_unemployment[['country', 'unemployment_rate']]
+```
+<br>
+The top five countries with the highest unemployment rates are Eswatini (37.85%), South Africa (28.84%), Djibouti (26.37%), 
+West Bank and Gaza (24.42%), and Botswana (23.62%). These high rates likely come from a mix of factors like limited job opportunities,
+ structural issues in the labor market, and, in some cases, political instability. 
+ Southern African countries are particularly affected, pointing to regional economic challenges. 
+ In the West Bank and Gaza, ongoing war and restrictions seems to be causing high unemployment.
+
+<br>
+
+### GDP growth rate and Unemployment Rate 
+
+
+```{python}
+#| echo: false
+#| warning: false
+#| fig-cap: "Scatter plot showing the relationship between GDP growth rate and unemployment rate. [@wbgapi]"
+#| label: fig-gdp-unemployment
+
+
+df3 = df2[df2['country'] != 'Guyana'] #Removing the outlier 'Guyana'
+# Scatter plot for GDP growth rate vs unemployment rate
+plt.figure(figsize=(8.5, 6))
+sns.scatterplot(data=df3, x='gdp_growth_rate', y='unemployment_rate', hue='country', s=100)
+plt.title('GDP Growth Rate vs Unemployment Rate')
+plt.xlabel('GDP Growth Rate (%)')
+plt.ylabel('Unemployment Rate (%)')
+plt.legend().set_visible(False)
+plt.tight_layout()
+plt.show()
+```
+<br>
+@fig-gdp-unemployment illustrates the relationship between GDP growth rate and unemployment rate across various countries. 
+Each point represents a country, with annotations for clarity. 
+The scatter plot shows a diverse range of economic situations, with no clear overall correlation between GDP growth and unemployment rates. 
+According to economic theory, we would typically expect an inverse relationship: higher GDP growth should correlate with lower unemployment rates.
+However, this data demonstrates that economic theory is sometimes not supported by empirical evidence, highlighting the complex nature of real-world economic relationships.
+[@okunslaw]
+<br>
+
+<br>
+
+### Top 20 countries by GDP per capita
+
+```{python}
+#| echo: false
+#| warning: false
+#| fig-cap: "Top 20 countries by GDP per capita [@wbgapi]"
+#| label: fig-top20-gdp-per-capita
+
+
+top20gdp = df.sort_values('gdp_per_capita', ascending=False).head(20)
+
+plt.figure(figsize=(8.5, 10))
+sns.barplot(x='gdp_per_capita', y='country', data=top20gdp, palette='viridis')
+
+plt.title('Top 20 Countries by GDP per Capita')
+plt.xlabel('GDP per Capita (USD)')
+plt.ylabel('Country')
+
+plt.tight_layout()
+plt.show()
+```
+@fig-top20-gdp-per-capita presents a horizontal bar chart showing the top 20 countries ranked by GDP per capita,
+ a measure of economic output per person calculated by dividing a country's total GDP by its population. 
+ This visualization illustrates the relative economic prosperity of the highest-ranking nations, 
+ providing insights into average living standards and economic productivity.
+
+<br>
+
+### Summary Statistics of GDP per Capita
+
+<br>
+
+```{python}
+#| echo: false
+#| label: tbl-gdp-per-capita
+#| tbl-cap: "Summary Statistics of GDP per Capita"
+
+summary = df['gdp_per_capita'].agg(['mean', 'std', 'min', 'max'])
+percentiles = df['gdp_per_capita'].quantile([0.25, 0.50, 0.75])
+sumStat = pd.concat([summary, percentiles])
+pd.DataFrame(sumStat)
+```
+<br>
+
+- The table of key GDP per capita statistics is presented in @tbl-gdp-per-capita, providing a summary of the mean, standard deviation, and key percentiles.
+
+- @fig-top20-gdp-per-capita presents a horizontal bar chart showing the top 20 countries ranked by GDP per capita.
